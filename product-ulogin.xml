@@ -1,0 +1,91 @@
+﻿<?xml version="1.0" encoding="ISO-8859-1"?>
+
+<product productid="ulogin" active="1">
+	<title>uLogin</title>
+	<description>Авторизация через социальные сети с помощью сервиса ulogin.ru</description>
+	<version>1.2</version>
+	<url>http://ulogin.ru/</url>
+	<codes>
+		<code version="1.2">
+			<installcode><![CDATA[
+$db->hide_errors();
+
+$db->query_write("CREATE TABLE " . TABLE_PREFIX . "ulogin (
+  `id` int(10) unsigned NOT NULL auto_increment,
+  `userid` int(10) NOT NULL,
+  `identity` text,
+  PRIMARY KEY (`id`)
+) ENGINE=MyISAM");
+
+$db->hide_errors();
+
+]]></installcode>
+		</code>
+	</codes>
+	<plugins>
+		<plugin active="1" executionorder="1">
+			<title>Adding uLogin icons.</title>
+			<hookname>global_start</hookname>
+			<phpcode><![CDATA[if ($vbulletin->options['ulogin_enable'] && !$vbulletin->userinfo['userid'])
+{
+	$url = urlencode($vbulletin->options['bburl'] . '/ulogin.php?back=' . base64_encode($vbulletin->options['bburl'] . $_SERVER['REQUEST_URI']));
+	$shown = $vbulletin->options['ulogin_shown_providers'];
+	$hidden = $vbulletin->options['ulogin_hidden_providers'];
+	
+	if ($vbulletin->versionnumber < 4)
+	{
+
+
+
+		$template_hook['ulogin'] = '<script src="http://ulogin.ru/js/ulogin.js"></script><a><div id="uLogin" x-ulogin-params="display=small&fields=first_name,last_name,photo&providers=' . $shown . '&hidden=' . $hidden . '&redirect_uri=' . $url . '"></div></a>';
+	}
+	else
+	{
+		$template_hook['ulogin'] = '<li><script src="http://ulogin.ru/js/ulogin.js"></script><a><div id="uLogin" x-ulogin-params="display=small&fields=first_name,last_name,photo&providers=' . $shown . '&hidden=' . $hidden . '&redirect_uri=' . $url . '"></div></a></li>';
+	}
+}]]></phpcode>
+		</plugin>
+	</plugins>
+	<phrases>
+		<phrasetype name="vBulletin Settings" fieldname="vbsettings">
+			<phrase name="settinggroup_ulogin"><![CDATA[Продукт uLogin]]></phrase>
+			<phrase name="setting_ulogin_enable_title"><![CDATA[Продукт активен]]></phrase>
+			<phrase name="setting_ulogin_enable_desc"><![CDATA[Включить продукт для входа пользователей на сайт с помощью сервиса uLogin.ru?]]></phrase>
+			<phrase name="setting_ulogin_vb_register_title"><![CDATA[Политика регистрации]]></phrase>
+			<phrase name="setting_ulogin_vb_register_desc"><![CDATA[Следовать политике регистрации на сайте?<br />Если нет, то пользователи будут перемещены в группу <b>указаную ниже</b>.]]></phrase>
+			<phrase name="setting_ulogin_groupid_title"><![CDATA[uLogin группа]]></phrase>
+			<phrase name="setting_ulogin_groupid_desc"><![CDATA[В какую группу перемещать пользователя после регистрации на сайте с помощью сервиса uLogin.ru?]]></phrase>
+			<phrase name="setting_ulogin_shown_providers_title"><![CDATA[Сервисы, выводимые сразу]]></phrase>
+			<phrase name="setting_ulogin_shown_providers_desc"><![CDATA[Здесь стоит указать сервисы, которые Ваши пользователи используют чаще всего.<br />Все возможны значения можно <a href="http://ulogin.ru" target="_blank">найти на сайте uLogin.ru</a>.<br /><b>Указывать сервисы через запятую и без пробелов!</b>]]></phrase>
+			<phrase name="setting_ulogin_hidden_providers_title"><![CDATA[Сервисы, выводимые при наведении]]></phrase>
+			<phrase name="setting_ulogin_hidden_providers_desc"><![CDATA[Здесь стоит указать сервисы, которые Ваши пользователи используют реже, чем остальные.<br />Все возможны значения можно <a href="http://ulogin.ru" target="_blank">найти на сайте uLogin.ru</a>.<br /><b>Указывать сервисы через запятую и без пробелов!</b>]]></phrase>
+		</phrasetype>
+	</phrases>
+	<options>
+		<settinggroup name="ulogin" displayorder="1000">
+			<setting varname="ulogin_enable" displayorder="10">
+				<datatype>boolean</datatype>
+				<optioncode>yesno</optioncode>
+				<defaultvalue>1</defaultvalue>
+			</setting>
+			<setting varname="ulogin_vb_register" displayorder="20">
+				<datatype>boolean</datatype>
+				<optioncode>yesno</optioncode>
+				<defaultvalue>1</defaultvalue>
+			</setting>
+			<setting varname="ulogin_groupid" displayorder="30">
+				<datatype>number</datatype>
+				<optioncode>usergroupextra</optioncode>
+				<defaultvalue>2</defaultvalue>
+			</setting>
+			<setting varname="ulogin_shown_providers" displayorder="40">
+				<datatype>free</datatype>
+				<defaultvalue>vkontakte,odnoklassniki,mailru,facebook</defaultvalue>
+			</setting>
+			<setting varname="ulogin_hidden_providers" displayorder="50">
+				<datatype>free</datatype>
+				<defaultvalue>twitter,google,yandex,livejournal,openid</defaultvalue>
+			</setting>
+		</settinggroup>
+	</options>
+</product>

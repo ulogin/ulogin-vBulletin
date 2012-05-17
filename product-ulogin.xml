@@ -1,12 +1,12 @@
-﻿<?xml version="1.0" encoding="ISO-8859-1"?>
+<?xml version="1.0" encoding="ISO-8859-1"?>
 
 <product productid="ulogin" active="1">
 	<title>uLogin</title>
 	<description>Авторизация через социальные сети с помощью сервиса ulogin.ru</description>
-	<version>1.2</version>
+	<version>1.3</version>
 	<url>http://ulogin.ru/</url>
 	<codes>
-		<code version="1.2">
+		<code version="1.3">
 			<installcode><![CDATA[
 $db->hide_errors();
 
@@ -31,17 +31,23 @@ $db->hide_errors();
 	$url = urlencode($vbulletin->options['bburl'] . '/ulogin.php?back=' . base64_encode($vbulletin->options['bburl'] . $_SERVER['REQUEST_URI']));
 	$shown = $vbulletin->options['ulogin_shown_providers'];
 	$hidden = $vbulletin->options['ulogin_hidden_providers'];
+	$wtype = $vbulletin->options['ulogin_widget_type'];
 	
 	if ($vbulletin->versionnumber < 4)
 	{
-
-
-
-		$template_hook['ulogin'] = '<script src="http://ulogin.ru/js/ulogin.js"></script><a><div id="uLogin" x-ulogin-params="display=small&fields=first_name,last_name,photo&providers=' . $shown . '&hidden=' . $hidden . '&redirect_uri=' . $url . '"></div></a>';
+	    if ($wtype == 'window'){
+                  $template_hook['ulogin'] = '<script src="http://ulogin.ru/js/ulogin.js"></script><a href="#" id="uLogin" x-ulogin-params="display=window;fields=first_name,last_name,nickname,email,bdate,photo;redirect_uri='.$url.'"><img src="http://ulogin.ru/img/button.png" style="width:155px;height:20px; margin: -3px;"/></a>';
+	    }else{
+		$template_hook['ulogin'] = '<script src="http://ulogin.ru/js/ulogin.js"></script><a><div id="uLogin" x-ulogin-params="display=small;fields=first_name,last_name,nickname,email,bdate,photo;providers=' . $shown . ';hidden=' . $hidden . ';redirect_uri=' . $url . '"></div></a>';
+	    }
 	}
 	else
 	{
-		$template_hook['ulogin'] = '<li><script src="http://ulogin.ru/js/ulogin.js"></script><a><div id="uLogin" x-ulogin-params="display=small&fields=first_name,last_name,photo&providers=' . $shown . '&hidden=' . $hidden . '&redirect_uri=' . $url . '"></div></a></li>';
+	    if ($wtype == 'window'){
+                  $template_hook['ulogin'] = '<script src="http://ulogin.ru/js/ulogin.js"></script><a href="#" id="uLogin" x-ulogin-params="display=window;fields=first_name,last_name,nickname,email,bdate,photo;redirect_uri='.$url.'"><img src="http://ulogin.ru/img/button.png" style="width:155px;height:20px; margin: -3px;"/></a>';
+	    }else{
+	      $template_hook['ulogin'] = '<li><script src="http://ulogin.ru/js/ulogin.js"></script><a><div id="uLogin" x-ulogin-params="display=small;fields=first_name,last_name,nickname,email,bdate,photo;providers=' . $shown . ';hidden=' . $hidden . ';redirect_uri=' . $url . '"></div></a></li>';
+	    }
 	}
 }]]></phpcode>
 		</plugin>
@@ -55,6 +61,8 @@ $db->hide_errors();
 			<phrase name="setting_ulogin_vb_register_desc"><![CDATA[Следовать политике регистрации на сайте?<br />Если нет, то пользователи будут перемещены в группу <b>указаную ниже</b>.]]></phrase>
 			<phrase name="setting_ulogin_groupid_title"><![CDATA[uLogin группа]]></phrase>
 			<phrase name="setting_ulogin_groupid_desc"><![CDATA[В какую группу перемещать пользователя после регистрации на сайте с помощью сервиса uLogin.ru?]]></phrase>
+			<phrase name="setting_ulogin_widget_type_title"><![CDATA[Тип uLogin виджета]]></phrase>
+			<phrase name="setting_ulogin_widget_type_desc"><![CDATA[В каком виде отображать виджет. Поддерживается 2 типа - small и window]]></phrase>
 			<phrase name="setting_ulogin_shown_providers_title"><![CDATA[Сервисы, выводимые сразу]]></phrase>
 			<phrase name="setting_ulogin_shown_providers_desc"><![CDATA[Здесь стоит указать сервисы, которые Ваши пользователи используют чаще всего.<br />Все возможны значения можно <a href="http://ulogin.ru" target="_blank">найти на сайте uLogin.ru</a>.<br /><b>Указывать сервисы через запятую и без пробелов!</b>]]></phrase>
 			<phrase name="setting_ulogin_hidden_providers_title"><![CDATA[Сервисы, выводимые при наведении]]></phrase>
@@ -78,13 +86,17 @@ $db->hide_errors();
 				<optioncode>usergroupextra</optioncode>
 				<defaultvalue>2</defaultvalue>
 			</setting>
-			<setting varname="ulogin_shown_providers" displayorder="40">
+			<setting varname="ulogin_widget_type" displayorder="40">
+				<datatype>free</datatype>
+				<defaultvalue>small</defaultvalue>
+			</setting>
+			<setting varname="ulogin_shown_providers" displayorder="50">
 				<datatype>free</datatype>
 				<defaultvalue>vkontakte,odnoklassniki,mailru,facebook</defaultvalue>
 			</setting>
-			<setting varname="ulogin_hidden_providers" displayorder="50">
+			<setting varname="ulogin_hidden_providers" displayorder="60">
 				<datatype>free</datatype>
-				<defaultvalue>twitter,google,yandex,livejournal,openid</defaultvalue>
+				<defaultvalue>other</defaultvalue>
 			</setting>
 		</settinggroup>
 	</options>

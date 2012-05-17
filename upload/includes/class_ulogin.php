@@ -54,83 +54,38 @@ class uLogin
 	 * @param 	bool 		$random		if true will generate random email
 	 * @return 	string				return email
 	 */
-	private function __fetch_random_email($random = false)
+	private function _fetch_login_mail()
 	{
-		if (!$random && $this->user['email'])
-		{
-			if ($user = $this->vb->db->query_first("SELECT * FROM " . TABLE_PREFIX . "user WHERE email = '" . $this->vb->db->escape_string($this->user['email']) . "'"))
-			{
-				return $this->__fetch_random_email(true);
-			}
+            $iso = array(
+                "?"=>"YE","?"=>"I","?"=>"G","?"=>"i","?"=>"#","?"=>"ye","?"=>"g",
+                "?"=>"A","?"=>"B","?"=>"V","?"=>"G","?"=>"D",
+                "?"=>"E","?"=>"YO","?"=>"ZH",
+                "?"=>"Z","?"=>"I","?"=>"J","?"=>"K","?"=>"L",
+                "?"=>"M","?"=>"N","?"=>"O","?"=>"P","?"=>"R",
+                "?"=>"S","?"=>"T","?"=>"U","?"=>"F","?"=>"X",
+                "?"=>"C","?"=>"CH","?"=>"SH","?"=>"SHH","?"=>"'",
+                "?"=>"Y","?"=>"","?"=>"E","?"=>"YU","?"=>"YA",
+                "?"=>"a","?"=>"b","?"=>"v","?"=>"g","?"=>"d",
+                "?"=>"e","?"=>"yo","?"=>"zh",
+                "?"=>"z","?"=>"i","?"=>"j","?"=>"k","?"=>"l",
+                "?"=>"m","?"=>"n","?"=>"o","?"=>"p","?"=>"r",
+                "?"=>"s","?"=>"t","?"=>"u","?"=>"f","?"=>"x",
+                "?"=>"c","?"=>"ch","?"=>"sh","?"=>"shh","?"=>"",
+                "?"=>"y","?"=>"","?"=>"e","?"=>"yu","?"=>"ya","�"=>"","�"=>"","?"=>"-"
+            );
+            $name = strtr(isset($this->user['nickname']) ? $this->user['nickname'] : $this->user['last_name'].'_'.$this->user['first_name'] , $iso);
+            $email_parts = explode('@', $this->user['email']);
+            $email = $this->user['email'];
+            while($this->db->query_first("SELECT * FROM ". TABLE_PREFIX ."user WHERE email = '" . $this->db->escape_string($email) . "' or username = '".$this->db->escape_string($name)."'"))
+            {
+                $name = strtr(isset($this->user['nickname']) ? $this->user['nickname'] : $this->user['last_name'].'_'.$this->user['first_name'] , $iso).$this->__random1();
+                $email = $email_parts[0].'+'.$name.'@'.$email_parts[1];
+            }
+            $this->user['email'] = $email;
+            $this->user['username'] = $name;
 			
-			return $this->user['email'];
-		}
-		
-		return 'uLogin' . $this->__random1(20) . '@' . $_SERVER['HTTP_HOST'].'.org';
 	}
-	
-	/**
-	 * Get current user name or generate random
-	 * 
-	 * @access 	private
-	 * @param 	string 		$name		if set will append random string
-	 * @param	int		$level		the higher the value the more random string will be in result
-	 * @return 	string				return user name
-	 */
-	private function __fetch_random_name($name = '', $level = 0)
-	{
-		if ($level == $this->max_level)
-		{
-			return '';
-		}
-		
-		if ($name)
-		{
-			$name = $name . $this->__random1(1);
-		}
-		else if ($this->user['first_name'] && $this->user['last_name'])
-		{
-			$name = $this->user['last_name'] . ' ' . $this->user['first_name'];
-		}
-		else if ($this->user['first_name'])
-		{
-			$name = $this->user['first_name'];
-		}
-		else if ($this->user['last_name'])
-		{
-			$name = $this->user['last_name'];
-		}
-		else
-		{
-			$name = 'uLogin' . $this->__random1(5);
-		}
-		
-$iso = array(
-   "Є"=>"YE","І"=>"I","Ѓ"=>"G","і"=>"i","№"=>"#","є"=>"ye","ѓ"=>"g",
-   "А"=>"A","Б"=>"B","В"=>"V","Г"=>"G","Д"=>"D",
-   "Е"=>"E","Ё"=>"YO","Ж"=>"ZH",
-   "З"=>"Z","И"=>"I","Й"=>"J","К"=>"K","Л"=>"L",
-   "М"=>"M","Н"=>"N","О"=>"O","П"=>"P","Р"=>"R",
-   "С"=>"S","Т"=>"T","У"=>"U","Ф"=>"F","Х"=>"X",
-   "Ц"=>"C","Ч"=>"CH","Ш"=>"SH","Щ"=>"SHH","Ъ"=>"'",
-   "Ы"=>"Y","Ь"=>"","Э"=>"E","Ю"=>"YU","Я"=>"YA",
-   "а"=>"a","б"=>"b","в"=>"v","г"=>"g","д"=>"d",
-   "е"=>"e","ё"=>"yo","ж"=>"zh",
-   "з"=>"z","и"=>"i","й"=>"j","к"=>"k","л"=>"l",
-   "м"=>"m","н"=>"n","о"=>"o","п"=>"p","р"=>"r",
-   "с"=>"s","т"=>"t","у"=>"u","ф"=>"f","х"=>"x",
-   "ц"=>"c","ч"=>"ch","ш"=>"sh","щ"=>"shh","ъ"=>"",
-   "ы"=>"y","ь"=>"","э"=>"e","ю"=>"yu","я"=>"ya","«"=>"","»"=>"","—"=>"-"
-  );
-		$name=strtr($name, $iso);
-		if ($user = $this->db->query_first("SELECT * FROM " . TABLE_PREFIX . "user WHERE username = '" . $this->db->escape_string($name) . "'"))
-		{
-			return $this->__fetch_random_name($name, ($level + 1));
-		}
-		
-		return $name;
-	}
-	
+
 	/**
 	 * Get user from ulogin.ru by token
 	 * 
@@ -191,7 +146,7 @@ $iso = array(
 	 * @return 	bool				if user authorized return true, else return false
 	 */
 	public function auth()
-	{
+	{   
 		if (!$this->user)
 		{
 			return false;
@@ -259,17 +214,11 @@ $iso = array(
 			eval(standard_error(fetch_error('noregister')));
 		}
 		
-		$username = '';
-		$email = '';
 		
-		if ($this->user)
-		{
-			$username = $this->__fetch_random_name();
-			$email = $this->__fetch_random_email();
-		}
 		
-		$userdata =& datamanager_init('User', $this->vb, ERRTYPE_ARRAY);
-		
+		$userdata = &datamanager_init('User', $this->vb, ERRTYPE_ARRAY);
+                
+               
 		if ($this->vb->options['ulogin_vb_register'])
 		{
 			if ($this->vb->options['verifyemail'])
@@ -289,15 +238,17 @@ $iso = array(
 		{
 			$newusergroupid = iif($this->vb->options['ulogin_groupid'], $this->vb->options['ulogin_groupid'], 2);
 		}
-		
-		$userdata->set('username', $username);
-		$userdata->set('email', $email);
+                
+		$this->_fetch_login_mail();
+                $bdate = explode('.', $this->user['bdate']);
+		$userdata->set('username', $this->user['username']);
+		$userdata->set('email', $this->user['email']);
 		$userdata->set('password', fetch_random_password(10));
 		$userdata->set('usergroupid', $newusergroupid);
 		$userdata->set_usertitle('', false, $this->vb->usergroupcache["$newusergroupid"], false, false);
 		$userdata->set('ipaddress', IPADDRESS);
 		$userdata->set('languageid', $this->vb->userinfo['languageid']);
-		
+		$userdata->set('birthday', $bdate[2].'-'.$bdate[1].'-'.$bdate[0]);
 		$userdata->pre_save();
 
 		if ($userdata->errors)
@@ -318,14 +269,15 @@ $iso = array(
 		{
 			return false;
 		}
-		
+                
+               
 		$this->db->query_write("INSERT INTO " . TABLE_PREFIX . "ulogin VALUES (NULL, " . $userid . ", '" . $this->db->escape_string($this->user['identity']) . "')");
-				
+                			
 		$userinfo = fetch_userinfo($userid);
 		$this->vb->session->created = false;
 				
 		process_new_login('', false, '');
-				
+                
 		if ($this->vb->options['newuseremail'] != '')
 		{
 			$ipaddress = IPADDRESS;
@@ -359,7 +311,9 @@ $iso = array(
 		}
 		
 		$this->vb->userinfo =& $userinfo;
-		
+                
+		$this->user_pic();
+                
 		if ($this->vb->options['ulogin_vb_register'])
 		{
 			if ($this->vb->options['verifyemail'])
@@ -383,6 +337,39 @@ $iso = array(
 			eval(standard_error(fetch_error('registration_complete', $username, $this->vb->session->vars['sessionurl'], $this->back_url), '', false));
 		}
 	}
+        
+        function user_pic(){
+            if (isset($this->vb->userinfo['userid'])){
+                
+                $filedata = '';
+                $handler = fopen($this->user['photo'],'rb'); 
+                while(!feof($handler)) {
+                    $filedata.= fread($handler, 1024 * 8 );
+                }
+                fclose($handler);
+                
+                $userpic = &datamanager_init('userpic', $this->vb, ERRTYPE_ARRAY);
+                /*
+                if ($this->vb->options['avatarenabled'] && $this->user['photo'] != 'http://ulogin.ru/img/photo.png'){
+                    $avatar = $userpic->fetch_library($this->vb,ERRTYPE_ARRAY, 'userpic_avatar');
+                    $avatar->set('userid', $this->vb->userinfo['userid']);
+                    $profilepic->set('filedata', $filedata);
+                    $avatar->set('filename', $this->user['username']);
+                    $avatar->pre_save();
+                    $avatar->save();
+                }*/
+                
+                if ($this->vb->options['profilepicenabled'] && $this->user['photo'] != 'http://ulogin.ru/img/photo.png'){
+                    $profilepic = $userpic->fetch_library($this->vb,ERRTYPE_ARRAY, 'userpic_profilepic');
+                    $profilepic->set('userid', $this->vb->userinfo['userid']);
+                    $profilepic->set('filedata',$filedata);
+                    $profilepic->set('filename', $this->user['username']);
+                    $profilepic->pre_save();
+                    $profilepic->save();
+                }
+            }
+            
+        }
 }
 
 ?>

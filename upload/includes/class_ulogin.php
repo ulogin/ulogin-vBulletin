@@ -57,21 +57,21 @@ class uLogin
 	private function _fetch_login_mail()
 	{
             $iso = array(
-                "?"=>"YE","?"=>"I","?"=>"G","?"=>"i","?"=>"#","?"=>"ye","?"=>"g",
-                "?"=>"A","?"=>"B","?"=>"V","?"=>"G","?"=>"D",
-                "?"=>"E","?"=>"YO","?"=>"ZH",
-                "?"=>"Z","?"=>"I","?"=>"J","?"=>"K","?"=>"L",
-                "?"=>"M","?"=>"N","?"=>"O","?"=>"P","?"=>"R",
-                "?"=>"S","?"=>"T","?"=>"U","?"=>"F","?"=>"X",
-                "?"=>"C","?"=>"CH","?"=>"SH","?"=>"SHH","?"=>"'",
-                "?"=>"Y","?"=>"","?"=>"E","?"=>"YU","?"=>"YA",
-                "?"=>"a","?"=>"b","?"=>"v","?"=>"g","?"=>"d",
-                "?"=>"e","?"=>"yo","?"=>"zh",
-                "?"=>"z","?"=>"i","?"=>"j","?"=>"k","?"=>"l",
-                "?"=>"m","?"=>"n","?"=>"o","?"=>"p","?"=>"r",
-                "?"=>"s","?"=>"t","?"=>"u","?"=>"f","?"=>"x",
-                "?"=>"c","?"=>"ch","?"=>"sh","?"=>"shh","?"=>"",
-                "?"=>"y","?"=>"","?"=>"e","?"=>"yu","?"=>"ya","�"=>"","�"=>"","?"=>"-"
+                "Є"=>"YE","І"=>"I","Ѓ"=>"G","і"=>"i","№"=>"#","є"=>"ye","ѓ"=>"g",
+                "А"=>"A","Б"=>"B","В"=>"V","Г"=>"G","Д"=>"D",
+                "Е"=>"E","Ё"=>"YO","Ж"=>"ZH",
+                "З"=>"Z","И"=>"I","Й"=>"J","К"=>"K","Л"=>"L",
+                "М"=>"M","Н"=>"N","О"=>"O","П"=>"P","Р"=>"R",
+                "С"=>"S","Т"=>"T","У"=>"U","Ф"=>"F","Х"=>"X",
+                "Ц"=>"C","Ч"=>"CH","Ш"=>"SH","Щ"=>"SHH","Ъ"=>"'",
+                "Ы"=>"Y","Ь"=>"","Э"=>"E","Ю"=>"YU","Я"=>"YA",
+                "а"=>"a","б"=>"b","в"=>"v","г"=>"g","д"=>"d",
+                "е"=>"e","ё"=>"yo","ж"=>"zh",
+                "з"=>"z","и"=>"i","й"=>"j","к"=>"k","л"=>"l",
+                "м"=>"m","н"=>"n","о"=>"o","п"=>"p","р"=>"r",
+                "с"=>"s","т"=>"t","у"=>"u","ф"=>"f","х"=>"x",
+                "ц"=>"c","ч"=>"ch","ш"=>"sh","щ"=>"shh","ъ"=>"",
+                "ы"=>"y","ь"=>"","э"=>"e","ю"=>"yu","я"=>"ya","«"=>"","»"=>"","—"=>"-"
             );
             $name = strtr(isset($this->user['nickname']) ? $this->user['nickname'] : $this->user['last_name'].'_'.$this->user['first_name'] , $iso);
             $email_parts = explode('@', $this->user['email']);
@@ -209,13 +209,17 @@ class uLogin
 	 */
 	public function register()
 	{
+
+
 		if (!$this->vb->options['allowregistration'] && $this->vb->options['ulogin_vb_register'])
 		{
 			eval(standard_error(fetch_error('noregister')));
 		}
-		
-		
-		
+
+        if ($addmember_process_hook = vBulletinHook::fetch_hook('register_addmember_process')){
+            eval($addmember_process_hook);
+        }
+
 		$userdata = &datamanager_init('User', $this->vb, ERRTYPE_ARRAY);
                 
                
@@ -238,7 +242,9 @@ class uLogin
 		{
 			$newusergroupid = iif($this->vb->options['ulogin_groupid'], $this->vb->options['ulogin_groupid'], 2);
 		}
-                
+
+
+
 		$this->_fetch_login_mail();
                 $bdate = explode('.', $this->user['bdate']);
 		$userdata->set('username', $this->user['username']);
@@ -336,6 +342,10 @@ class uLogin
 		{
 			eval(standard_error(fetch_error('registration_complete', $username, $this->vb->session->vars['sessionurl'], $this->back_url), '', false));
 		}
+
+        if ($addmember_complete_hook = vBulletinHook::fetch_hook('register_addmember_complete')){
+            eval($addmember_complete_hook);
+        }
 	}
         
         function user_pic(){

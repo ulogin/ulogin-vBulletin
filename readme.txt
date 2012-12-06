@@ -3,8 +3,9 @@ Donate link: http://ulogin.ru/
 Tags: ulogin, login, social, authorization
 Requires at least: 3.x.x
 Tested up to: 4.x.x
-Stable tag: 1.6
+Stable tag: 1.4
 License: GPL3
+
 Форма авторизации uLogin через социальные сети. Улучшенный аналог loginza.
 
 == Description ==
@@ -18,6 +19,9 @@ uLogin — это инструмент, который позволяет пол
 	2) Импортировать продукт product-ulogin.xml, находящийся в корне архива, в vBulletin с помощью администраторской панели.
 	3) Правка шаблона с помощью администраторской панели.
 		3.1) Для vBulletin 4.x.x:
+
+		- Основная панель uLogin
+
 		Шаблон:		header
 		Найти:
 		
@@ -32,25 +36,79 @@ uLogin — это инструмент, который позволяет пол
 		Ниже добавить:
 		
 				{vb:raw template_hook.ulogin}
-				
-		3.2) Для vBulletin 3.x.x:
-		Шаблон:		navbar
+		
+		- Панель uLogin для подключения аккаунтов
+
+		Шаблон:		modifyprofile
 		Найти:
-		
-		<tr>
-			<td class="smallfont"><label for="navbar_password">$vbphrase[password]</label></td>
-			<td><input type="password" class="bginput" style="font-size: 11px" name="vb_login_password" id="navbar_password" size="10" tabindex="102" /></td>
-			<td><input type="submit" class="button" value="$vbphrase[log_in]" tabindex="104" title="$vbphrase[enter_username_to_login_or_register]" accesskey="s" /></td>
-		</tr>
-		
+
+		<div class="section">
+			{vb:raw customfields.regular}
+
 		Ниже добавить:
+
+			      {vb:raw template_hook.ulogin} 
+
+		3.2) Для vBulletin 3.x.x:
+
+		    - Основная панель uLogin
+
+		    Шаблон:		navbar
+		    Найти:
+		    
+		    <tr>
+			    <td class="smallfont"><label for="navbar_password">$vbphrase[password]</label></td>
+			    <td><input type="password" class="bginput" style="font-size: 11px" name="vb_login_password" id="navbar_password" size="10" tabindex="102" /></td>
+			    <td><input type="submit" class="button" value="$vbphrase[log_in]" tabindex="104" title="$vbphrase[enter_username_to_login_or_register]" accesskey="s" /></td>
+		    </tr>
+		    
+		    Ниже добавить:
+		    
+		    <tr>
+			    <td colspan="3">$template_hook[ulogin]</td>
+		    </tr>
 		
-		<tr>
-			<td colspan="3">$template_hook[ulogin]</td>
-		</tr>
+		    - Панель uLogin для подключения аккаунтов
+
+		    Шаблон		modifyprofile
+		    Найти:
+		
+		    	<div class="panel">
+			  <div style="width:$stylevar[formwidth_usercp]" align="$stylevar[left]">
+
+			  $customfields[regular]
+			  <!-- end if custom fields -->
+	
+		    Ниже добавить:
+
+		      $template_hook[ulogin]
+	  
 			
 	4) По необходимости изменить настройки продукта средствами администраторской панели.
 == Changelog ==
+1.3
 - Изменена генерация имени пользователя и email;
 - Фото из социальной сети добавляется как фото профиля;
-- Добавлена возможность изменить тип отображаемого виджета.
+- Добавлена возможность изменить тип отображаемого виджета;
+1.4
+- Фото из социальной сети добавляется как аватар профиля;
+- Изменен способ инициализации виджета в шаблонных хуках;
+- Изменен способ получения данных пользователя через токен(curl или file_get_contents);
+- Добавлена возможность подключения(связывания) пользовательских профилей uLogin для единой авторизации. Опции подключения:
+  1.Просмотр списка подключенных профилей и подключение/отключение профилей через панель uLogin в UserCP->Edit Your Details->uLogin;
+
+  2.Опция "Автоматическое подключение профилей uLogin" - переключаемая опция в административной панели (по умолчанию включена). 
+
+    Подключает пользовательский профиль uLogin к существующему профилю при совпадении подтвержденного email(verified_email). 
+    Не рекомендуется использовать совместно с опцией "Перенос пользователя при привязке vBulletin", может привести к удалению аккаунта;
+  
+  3.Опция "Перенос пользователя vBulletin при привязке" - переключаемая опция в административной панели (по умолчанию отключена).
+    Переносит альбомы, посты, профили uLogin и т.д. пользовательского профиля vBulletin на текущий пользовательский профиль vB при переподключении связанного профиля uLogin.
+    Удаляет старый пользовательский профиль vB.  Не рекомендуется использовать совместно с опцией "Автоматическое подключение профилей uLogin".
+
+  4.Опция "Подтверждение email" переключаемая опция в административной панели (по умолчанию отключена). 
+    Добавляет параметр verify=1 в виджет. Используется для проверки принадлежности к указанному почтовому адресу. Проверка осуществляется один раз.
+    Подробнее про параметр verify можно прочесть тут http://ulogin.ru/faq.html.
+
+     
+  

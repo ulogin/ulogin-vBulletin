@@ -1,14 +1,14 @@
 <?php
 
-/** 
- * Auth via uLogin.ru
+/**
+ * Detach uLogin profile
  * @package vBulletin
  * @subpackage uLogin Product
  * @author uLogin http://ulogin.ru team@ulogin.ru
  */
 error_reporting(E_ALL & ~E_NOTICE);
 
-define('THIS_SCRIPT', 'ulogin');
+define('THIS_SCRIPT', 'ulogindetach');
 define('CSRF_PROTECTION', false);
 define('CONTENT_PAGE', true);
 
@@ -17,18 +17,16 @@ require_once(DIR . '/includes/class_ulogin.php');
 
 $uLogin = new uLogin($vbulletin);
 
-if (!$uLogin->check_access())
+if (!$uLogin->check_profile_detach_access())
 {
-	print_no_permission();
+    print_no_permission();
+
 }
 
-if (!$uLogin->auth())
-{
-	$uLogin->register();
-}
+$uLogin->detach();
 
 $vbulletin->url = $uLogin->get_url();
 
-do_login_redirect();
+exec_header_redirect($vbulletin->url);
 
 ?>

@@ -3,14 +3,16 @@
 <product productid="ulogin" active="1">
 	<title>uLogin</title>
 	<description>Авторизация через социальные сети с помощью сервиса ulogin.ru</description>
-	<version>1.3</version>
+	<version>1.4</version>
 	<url>http://ulogin.ru/</url>
+	<versioncheckurl />
+	<dependencies>
+	</dependencies>
 	<codes>
-		<code version="1.3">
-			<installcode><![CDATA[
-$db->hide_errors();
+		<code version="1.4">
+			<installcode><![CDATA[$db->hide_errors();
 
-$db->query_write("CREATE TABLE " . TABLE_PREFIX . "ulogin (
+$db->query_write("CREATE TABLE IF NOT EXISTS " . TABLE_PREFIX . "ulogin (
   `id` int(10) unsigned NOT NULL auto_increment,
   `userid` int(10) NOT NULL,
   `identity` text,
@@ -20,8 +22,11 @@ $db->query_write("CREATE TABLE " . TABLE_PREFIX . "ulogin (
 $db->hide_errors();
 
 ]]></installcode>
+			<uninstallcode />
 		</code>
 	</codes>
+	<templates>
+	</templates>
 	<plugins>
 		<plugin active="1" executionorder="1">
 			<title>Adding uLogin icons.</title>
@@ -32,41 +37,92 @@ $db->hide_errors();
 	$shown = $vbulletin->options['ulogin_shown_providers'];
 	$hidden = $vbulletin->options['ulogin_hidden_providers'];
 	$wtype = $vbulletin->options['ulogin_widget_type'];
-	
-	if ($vbulletin->versionnumber < 4)
-	{
-	    if ($wtype == 'window'){
-                  $template_hook['ulogin'] = '<script src="http://ulogin.ru/js/ulogin.js"></script><a href="#" id="uLogin" x-ulogin-params="display=window;fields=first_name,last_name,nickname,email,bdate,photo;redirect_uri='.$url.'"><img src="http://ulogin.ru/img/button.png" style="width:155px;height:20px; margin: -3px;"/></a>';
-	    }else{
-		$template_hook['ulogin'] = '<script src="http://ulogin.ru/js/ulogin.js"></script><a><div id="uLogin" x-ulogin-params="display=small;fields=first_name,last_name,nickname,email,bdate,photo;providers=' . $shown . ';hidden=' . $hidden . ';redirect_uri=' . $url . '"></div></a>';
-	    }
+	$verify = $vbulletin->options['ulogin_verify'] ? "verify=1" : 'verify=0';
+	if ($wtype == 'window'){
+                  $template_hook['ulogin'] = $output_list. '<script src="http://ulogin.ru/js/ulogin.js?display=window&fields=first_name,last_name,nickname,email,bdate,photo&redirect_uri='.$url.'">     </script><a href="#" id="uLogin"><img src="http://ulogin.ru/img/button.png"/></a>';
+        }else{
+                $wtype =($wtype == 'panel' || $wtype == 'small') ? $wtype : 'small';
+             if ($vbulletin->versionnumber < 4){
+                $template_hook['ulogin'] = $output_list. '<script src="http://ulogin.ru/js/ulogin.js?display='.$wtype.
+                        '&fields=first_name,last_name,nickname,email,bdate,photo&providers=' . $shown . '&hidden=' . $hidden . '&redirect_uri=' . $url . '"></script><a><div id="uLogin"></div></a>';
+              }else{
+                    $template_hook['ulogin'] = '<li>'.$output_list.'<script src="http://ulogin.ru/js/ulogin.js?display='.$wtype.'&fields=first_name,last_name,nickname,email,bdate,photo&providers='.$shown.'&hidden='.$hidden.'&redirect_uri='.$url.'"></script><a><div id="uLogin"></div></a></li>';
+                }
+    } 
+}]]></phpcode>
+		</plugin>
+		<plugin active="1" executionorder="5">
+			<title>uLogin profile attached</title>
+			<hookname>profile_editprofile_start</hookname>
+			<phpcode><![CDATA[if ($vbulletin->options['ulogin_enable'] && $vbulletin->userinfo['userid'])
+{
+	$url = urlencode($vbulletin->options['bburl'] . '/uloginattach.php?back=' . base64_encode($vbulletin->options['bburl'] . $_SERVER['REQUEST_URI']));
+	$shown = $vbulletin->options['ulogin_shown_providers'];
+	$hidden = $vbulletin->options['ulogin_hidden_providers'];
+	$wtype = $vbulletin->options['ulogin_widget_type'];
+	$list_label = $vbulletin->options['ulogin_list_label'];
+	$attach_label = $vbulletin->options['ulogin_attach_label'];
+        $attached_identity = array();
+        $userid = $vbulletin->userinfo['userid'];
+        $result = $vbulletin->db->query_read("SELECT identity FROM ".TABLE_PREFIX."ulogin WHERE userid=".$userid);
+        $output_list = '<table cellpadding="2" cellspacing="3" border="0" style="width:100%; margin: 3px 0px 5px;"><tbody><tr><td>'.$list_label.'</td><td></td></tr>';
+
+        while($identity = $vbulletin->db->fetch_row($result)){
+            $output_list.= "<tr><td><a style='text-decoration:none;' href='".$identity[0]."' target='_blank'>".$identity[0]."</a></td><td><a style='text-decoration:none;' href='".$vbulletin->options['bburl']."/ulogindetach.php?ident=".urlencode($identity[0])."'>&times;</a></td></tr>";
+        }
+        $output_list.= "</tbody></table>";
+
+        if ($vbulletin->versionnumber < 4){
+            $template_hook['ulogin'] = "<fieldset class='fieldset'><legend>uLogin</legend>{%list}<div style='margin:2px 5px;'><span>".$attach_label."</span>{%widget}</div></fieldset>";
+        }else{
+            $template_hook['ulogin'] = "<div class='blockrow'><label>uLogin:</label><div class='rightcol'><div>{%list}</div><label>".$attach_label."</label>{%widget}</div></div>";
+        }
+
+        $widget_code = "";        
+
+        if ($wtype == 'window'){
+
+            $widget_code = '<script src="http://ulogin.ru/js/ulogin.js?display=window&fields=first_name,last_name,nickname,email,bdate,photo&redirect_uri='.$url.'">'.
+                           '</script><a href="#" id="uLogin"><img src="http://ulogin.ru/img/button.png"/></a>';
+
+        }else{
+
+            $wtype =($wtype == 'panel' || $wtype == 'small') ? $wtype : 'small';
+            $widget_code = '<script src="http://ulogin.ru/js/ulogin.js?display='.$wtype.'&fields=first_name,last_name,nickname,email,bdate,photo&providers=' . 
+                           $shown . '&hidden=' . $hidden . '&redirect_uri=' . $url . '"></script><a><div id="uLogin"></div></a>';
+
 	}
-	else
-	{
-	    if ($wtype == 'window'){
-                  $template_hook['ulogin'] = '<script src="http://ulogin.ru/js/ulogin.js"></script><a href="#" id="uLogin" x-ulogin-params="display=window;fields=first_name,last_name,nickname,email,bdate,photo;redirect_uri='.$url.'"><img src="http://ulogin.ru/img/button.png" style="width:155px;height:20px; margin: -3px;"/></a>';
-	    }else{
-	      $template_hook['ulogin'] = '<li><script src="http://ulogin.ru/js/ulogin.js"></script><a><div id="uLogin" x-ulogin-params="display=small;fields=first_name,last_name,nickname,email,bdate,photo;providers=' . $shown . ';hidden=' . $hidden . ';redirect_uri=' . $url . '"></div></a></li>';
-	    }
-	}
+
+        $template_hook['ulogin'] = str_replace("{%list}", $output_list, $template_hook['ulogin']); 
+        $template_hook['ulogin'] = str_replace("{%widget}", $widget_code, $template_hook['ulogin']); 
 }]]></phpcode>
 		</plugin>
 	</plugins>
 	<phrases>
 		<phrasetype name="vBulletin Settings" fieldname="vbsettings">
-			<phrase name="settinggroup_ulogin"><![CDATA[Продукт uLogin]]></phrase>
-			<phrase name="setting_ulogin_enable_title"><![CDATA[Продукт активен]]></phrase>
-			<phrase name="setting_ulogin_enable_desc"><![CDATA[Включить продукт для входа пользователей на сайт с помощью сервиса uLogin.ru?]]></phrase>
-			<phrase name="setting_ulogin_vb_register_title"><![CDATA[Политика регистрации]]></phrase>
-			<phrase name="setting_ulogin_vb_register_desc"><![CDATA[Следовать политике регистрации на сайте?<br />Если нет, то пользователи будут перемещены в группу <b>указаную ниже</b>.]]></phrase>
-			<phrase name="setting_ulogin_groupid_title"><![CDATA[uLogin группа]]></phrase>
-			<phrase name="setting_ulogin_groupid_desc"><![CDATA[В какую группу перемещать пользователя после регистрации на сайте с помощью сервиса uLogin.ru?]]></phrase>
-			<phrase name="setting_ulogin_widget_type_title"><![CDATA[Тип uLogin виджета]]></phrase>
-			<phrase name="setting_ulogin_widget_type_desc"><![CDATA[В каком виде отображать виджет. Поддерживается 2 типа - small и window]]></phrase>
-			<phrase name="setting_ulogin_shown_providers_title"><![CDATA[Сервисы, выводимые сразу]]></phrase>
-			<phrase name="setting_ulogin_shown_providers_desc"><![CDATA[Здесь стоит указать сервисы, которые Ваши пользователи используют чаще всего.<br />Все возможны значения можно <a href="http://ulogin.ru" target="_blank">найти на сайте uLogin.ru</a>.<br /><b>Указывать сервисы через запятую и без пробелов!</b>]]></phrase>
-			<phrase name="setting_ulogin_hidden_providers_title"><![CDATA[Сервисы, выводимые при наведении]]></phrase>
-			<phrase name="setting_ulogin_hidden_providers_desc"><![CDATA[Здесь стоит указать сервисы, которые Ваши пользователи используют реже, чем остальные.<br />Все возможны значения можно <a href="http://ulogin.ru" target="_blank">найти на сайте uLogin.ru</a>.<br /><b>Указывать сервисы через запятую и без пробелов!</b>]]></phrase>
+			<phrase name="setting_ulogin_attach_del_desc" date="0" username="" version=""><![CDATA[Перенос пользователя vBulletin при привязке его профиля uLogin к другому пользователю с последующим удалением]]></phrase>
+			<phrase name="setting_ulogin_attach_del_title" date="0" username="" version=""><![CDATA[Перенос пользователя vBulletin при привязке]]></phrase>
+			<phrase name="setting_ulogin_attach_label_desc" date="0" username="" version=""><![CDATA[Описание виджета uLogin для подключения профилей в настройках профиля текщуего пользователя]]></phrase>
+			<phrase name="setting_ulogin_attach_label_title" date="0" username="" version=""><![CDATA[Описание виджета для подключения профилей]]></phrase>
+			<phrase name="setting_ulogin_auto_attach_desc" date="0" username="" version=""><![CDATA[Подключение профиля uLogin к профилю с таким же email, если email подтвержден(verified_email)]]></phrase>
+			<phrase name="setting_ulogin_auto_attach_title" date="0" username="" version=""><![CDATA[Автоматическое подключение профилей uLogin]]></phrase>
+			<phrase name="setting_ulogin_enable_desc" date="0" username="" version=""><![CDATA[Включить продукт для входа пользователей на сайт с помощью сервиса uLogin.ru?]]></phrase>
+			<phrase name="setting_ulogin_enable_title" date="0" username="" version=""><![CDATA[Продукт активен]]></phrase>
+			<phrase name="setting_ulogin_groupid_desc" date="0" username="" version=""><![CDATA[В какую группу перемещать пользователя после регистрации на сайте с помощью сервиса uLogin.ru?]]></phrase>
+			<phrase name="setting_ulogin_groupid_title" date="0" username="" version=""><![CDATA[uLogin группа]]></phrase>
+			<phrase name="setting_ulogin_hidden_providers_desc" date="0" username="" version=""><![CDATA[Здесь стоит указать сервисы, которые Ваши пользователи используют реже, чем остальные.<br />Все возможны значения можно <a href="http://ulogin.ru" target="_blank">найти на сайте uLogin.ru</a>.<br /><b>Указывать сервисы через запятую и без пробелов!</b>]]></phrase>
+			<phrase name="setting_ulogin_hidden_providers_title" date="0" username="" version=""><![CDATA[Сервисы, выводимые при наведении]]></phrase>
+			<phrase name="setting_ulogin_list_label_desc" date="0" username="" version=""><![CDATA[Заголовок списка подключенных профилей uLogin в настройках профиля текщуего пользователя]]></phrase>
+			<phrase name="setting_ulogin_list_label_title" date="0" username="" version=""><![CDATA[Заголовок списка профилей uLogin]]></phrase>
+			<phrase name="setting_ulogin_shown_providers_desc" date="0" username="" version=""><![CDATA[Здесь стоит указать сервисы, которые Ваши пользователи используют чаще всего.<br />Все возможны значения можно <a href="http://ulogin.ru" target="_blank">найти на сайте uLogin.ru</a>.<br /><b>Указывать сервисы через запятую и без пробелов!</b>]]></phrase>
+			<phrase name="setting_ulogin_shown_providers_title" date="0" username="" version=""><![CDATA[Сервисы, выводимые сразу]]></phrase>
+			<phrase name="setting_ulogin_vb_register_desc" date="0" username="" version=""><![CDATA[Следовать политике регистрации на сайте?<br />Если нет, то пользователи будут перемещены в группу <b>указаную ниже</b>.]]></phrase>
+			<phrase name="setting_ulogin_vb_register_title" date="0" username="" version=""><![CDATA[Политика регистрации]]></phrase>
+			<phrase name="setting_ulogin_verify_desc" date="0" username="" version=""><![CDATA[Спрашивать подтверждение email при авторизации]]></phrase>
+			<phrase name="setting_ulogin_verify_title" date="0" username="" version=""><![CDATA[Подтверждение email]]></phrase>
+			<phrase name="setting_ulogin_widget_type_desc" date="0" username="" version=""><![CDATA[В каком виде отображать виджет. Поддерживается 2 типа - small и window]]></phrase>
+			<phrase name="setting_ulogin_widget_type_title" date="0" username="" version=""><![CDATA[Тип uLogin виджета]]></phrase>
+			<phrase name="settinggroup_ulogin" date="0" username="" version=""><![CDATA[Продукт uLogin]]></phrase>
 		</phrasetype>
 	</phrases>
 	<options>
@@ -98,6 +154,35 @@ $db->hide_errors();
 				<datatype>free</datatype>
 				<defaultvalue>other</defaultvalue>
 			</setting>
+			<setting varname="ulogin_auto_attach" displayorder="70">
+				<datatype>boolean</datatype>
+				<optioncode>yesno</optioncode>
+				<defaultvalue>1</defaultvalue>
+			</setting>
+			<setting varname="ulogin_verify" displayorder="80">
+				<datatype>boolean</datatype>
+				<optioncode>yesno</optioncode>
+				<defaultvalue>0</defaultvalue>
+			</setting>
+			<setting varname="ulogin_attach_del" displayorder="90">
+				<datatype>boolean</datatype>
+				<optioncode>yesno</optioncode>
+				<defaultvalue>0</defaultvalue>
+			</setting>
+			<setting varname="ulogin_list_label" displayorder="100">
+				<datatype>free</datatype>
+				<defaultvalue>Подключенные профили uLogin</defaultvalue>
+			</setting>
+			<setting varname="ulogin_attach_label" displayorder="110">
+				<datatype>free</datatype>
+				<defaultvalue>Подключить профили uLogin</defaultvalue>
+			</setting>
 		</settinggroup>
 	</options>
+	<helptopics>
+	</helptopics>
+	<cronentries>
+	</cronentries>
+	<faqentries>
+	</faqentries>
 </product>

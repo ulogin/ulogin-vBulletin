@@ -27,6 +27,7 @@ class uLogin
 		$this->db = $vb->db;
 		$this->vb->input->clean_gpc('p', 'token', TYPE_STR);
 		$this->vb->input->clean_gpc('g', 'back', TYPE_STR);
+        $this->vb->input->clean_gpc('g', 'ident', TYPE_STR);
 		
 		if ($this->vb->GPC['token'])
 		{
@@ -44,9 +45,31 @@ class uLogin
 			$this->back_url = $this->vb->options['forumhome'] . '.php' . $this->vb->session->vars['sessionurl_q'];
 		}
 		
-		$this->__get_user();
+		$this->_get_user();
 	}
-	
+
+    /**
+     * Get user with same email and return user id
+     *
+     * @access 	private
+     * @return 	int        user id
+     */
+    private function _check_email(){
+
+        if ($this->user['verified_email'] != 1){
+
+            return false;
+
+        }
+
+        $email = $this->user['email'];
+        $result = $this->db->query_first("SELECT userid FROM ". TABLE_PREFIX ."user WHERE email = '" . $email . "'");
+
+        return $result['userid'];
+
+    }
+
+
 	/**
 	 * Get current user email or generate random
 	 * 
@@ -78,7 +101,7 @@ class uLogin
             $email = $this->user['email'];
             while($this->db->query_first("SELECT * FROM ". TABLE_PREFIX ."user WHERE email = '" . $this->db->escape_string($email) . "' or username = '".$this->db->escape_string($name)."'"))
             {
-                $name = strtr(isset($this->user['nickname']) ? $this->user['nickname'] : $this->user['last_name'].'_'.$this->user['first_name'] , $iso).$this->__random1();
+                $name = strtr(isset($this->user['nickname']) ? $this->user['nickname'] : $this->user['last_name'].'_'.$this->user['first_name'] , $iso).$this->_random_string();
                 $email = $email_parts[0].'+'.$name.'@'.$email_parts[1];
             }
             $this->user['email'] = $email;
@@ -92,7 +115,7 @@ class uLogin
 	 * @access 	private
 	 * @return 	mixed				if token expired or some errors occurred will return NULL else will return user data
 	 */
-	private function __get_user()
+	private function _get_user()
 	{
 		if ($this->user)
 		{
@@ -101,33 +124,64 @@ class uLogin
 		
 		if ($this->token)
 		{
-			$info = file_get_contents('http://ulogin.ru/token.php?token=' . $this->token . '&host=' . $_SERVER['HTTP_HOST']);
-			
-			if (function_exists('json_decode'))
-			{
-				$this->user = json_decode($info, true);
-			}
-			else
-			{
-				$json = new Services_JSON();
-				
-				$this->user = $json->decode($info, true);
-			}
-			
-			return $this->user;
+			$this->_get_user_from_token();
 		}
 		
 		return NULL;
 	}
-	
-	/**
+
+    /**
+     * Perform request
+     *
+     * @access private
+     * @return void
+     */
+    private function _get_user_from_token()
+    {
+        $response = false;
+
+        if (function_exists('file_get_contents') && ini_get('allow_url_fopen')){
+
+            $response = file_get_contents('http://ulogin.ru/token.php?token=' . $this->token . '&host=' . $_SERVER['HTTP_HOST']);
+
+        }elseif(in_array('curl', get_loaded_extensions())){
+
+            $request = curl_init('http://ulogin.ru/token.php?token=' . $this->token . '&host=' . $_SERVER['HTTP_HOST']);
+            curl_setopt($request, CURLOPT_RETURNTRANSFER, 1);
+            $response = curl_exec($request);
+
+        } else {
+
+            return;
+
+        }
+
+        if ($response){
+
+            if (function_exists('json_decode')){
+
+                $this->user = json_decode($response, true);
+
+            }
+            else{
+
+                $json = new Services_JSON();
+                $this->user = $json->decode($response, true);
+
+            }
+
+        }
+
+    }
+
+    /**
 	 * Generate random string
 	 * 
 	 * @access 	private
 	 * @param	int		$length		length of generating string
 	 * @return 	string				return generated string
 	 */
-	private function __random1($length = 10)
+	private function _random_string($length = 10)
 	{
 		$random = '';
 		
@@ -138,7 +192,111 @@ class uLogin
 		
 		return $random;
 	}
-	
+
+    /**
+     * Attach uLogin profile to profile of current user
+     *
+     * @access 	public
+     * @return 	bool
+     */
+    public function attach(){
+
+        if (!$this->user)
+        {
+            return false;
+        }
+
+        if (!$user = $this->db->query_first("SELECT * FROM " . TABLE_PREFIX . "ulogin WHERE identity = '" . $this->db->escape_string($this->user['identity']) . "'"))
+        {
+
+            $this->db->query_write("INSERT INTO " . TABLE_PREFIX . "ulogin (userid, identity) VALUES (" . $this->vb->userinfo['userid'] . ", '" . $this->db->escape_string($this->user['identity']) . "')");
+
+        }
+
+        $user_id = $user['userid'];
+
+        $this->_update_attached_profile($user_id);
+
+        return true;
+    }
+
+    /**
+     * Update attached profile
+     *
+     * @access 	public
+     * @return 	void
+     */
+    private function _update_attached_profile($user_id = 0){
+
+        if ($user_id != $this->vb->userinfo['userid'] && $user_id > 1){
+
+            $this->db->query_write("UPDATE " . TABLE_PREFIX . "ulogin SET userid=".$this->vb->userinfo['userid']." WHERE identity='".$this->db->escape_string($this->user['identity'])."'");
+
+            if ($this->vb->options['ulogin_attach_del']){
+
+                $this->db->query_write("UPDATE " . TABLE_PREFIX . "ulogin SET userid=".$this->vb->userinfo['userid']." WHERE userid=".$user_id);
+                $this->db->query_write("UPDATE " . TABLE_PREFIX . "album SET userid=".$this->vb->userinfo['userid']." WHERE userid=".$this->db->escape_string($user_id));
+                $this->db->query_write("UPDATE " . TABLE_PREFIX . "attachment SET userid=".$this->vb->userinfo['userid']." WHERE userid=".$this->db->escape_string($user_id));
+                $this->db->query_write("UPDATE " . TABLE_PREFIX . "event SET userid=".$this->vb->userinfo['userid']." WHERE userid=".$this->db->escape_string($user_id));
+                $this->db->query_write("UPDATE " . TABLE_PREFIX . "reminder SET userid=".$this->vb->userinfo['userid']." WHERE userid=".$this->db->escape_string($user_id));
+                $this->db->query_write("UPDATE " . TABLE_PREFIX . "pollvote SET userid=".$this->vb->userinfo['userid']." WHERE userid=".$this->db->escape_string($user_id));
+                $this->db->query_write("UPDATE " . TABLE_PREFIX . "post SET userid=".$this->vb->userinfo['userid']." WHERE userid=".$this->db->escape_string($user_id));
+                $this->db->query_write("UPDATE " . TABLE_PREFIX . "subscribediscussion SET userid=".$this->vb->userinfo['userid']." WHERE userid=".$this->db->escape_string($user_id));
+                $this->db->query_write("UPDATE " . TABLE_PREFIX . "subscribeevent SET userid=".$this->vb->userinfo['userid']." WHERE userid=".$this->db->escape_string($user_id));
+                $this->db->query_write("UPDATE " . TABLE_PREFIX . "subscribeforum SET userid=".$this->vb->userinfo['userid']." WHERE userid=".$this->db->escape_string($user_id));
+                $this->db->query_write("UPDATE " . TABLE_PREFIX . "subscribegroup SET userid=".$this->vb->userinfo['userid']." WHERE userid=".$this->db->escape_string($user_id));
+                $this->db->query_write("UPDATE " . TABLE_PREFIX . "subscribethread SET userid=".$this->vb->userinfo['userid']." WHERE userid=".$this->db->escape_string($user_id));
+                $this->db->query_write("UPDATE " . TABLE_PREFIX . "usergroupleader SET userid=".$this->vb->userinfo['userid']." WHERE userid=".$this->db->escape_string($user_id));
+
+                if ($this->vb->versionnumber < 4)
+                    $this->db->query_write("UPDATE " . TABLE_PREFIX . "picture SET userid=".$this->vb->userinfo['userid']." WHERE userid=".$this->db->escape_string($user_id));
+
+                $this->delete_user($user_id);
+
+            }
+
+        }
+
+    }
+
+    /**
+     * Delete user profile
+     *
+     * @access 	public
+     * @return 	void
+     */
+    private function delete_user($user_id = 0){
+
+        $user = $this->db->query_first("SELECT * FROM " . TABLE_PREFIX . "user WHERE userid = '" . $user_id . "'");
+        $userdm =& datamanager_init('User',$this->vb,ERRTYPE_ARRAY);
+        $userdm->set_existing($user);
+        $userdm->delete();
+        $userdm->pre_save();
+
+        if(empty($userdm->errors))
+        {
+            $userdm->save();
+        }
+        else
+        {
+            die(print_r($userdm->errors));
+        }
+
+    }
+
+    /**
+     * Detach uLogin profile
+     *
+     * @access 	public
+     * @return 	bool
+     */
+    public function detach(){
+
+        $this->db->query_write("DELETE FROM " . TABLE_PREFIX . "ulogin WHERE identity = '" . $this->db->escape_string($this->vb->GPC['ident'])."' AND userid=".$this->vb->userinfo['userid']);
+
+    }
+
+
 	/**
 	 * Auth user
 	 * 
@@ -146,7 +304,7 @@ class uLogin
 	 * @return 	bool				if user authorized return true, else return false
 	 */
 	public function auth()
-	{   
+	{
 		if (!$this->user)
 		{
 			return false;
@@ -154,24 +312,52 @@ class uLogin
 		
 		if (!$user = $this->db->query_first("SELECT * FROM " . TABLE_PREFIX . "ulogin WHERE identity = '" . $this->db->escape_string($this->user['identity']) . "'"))
 		{
-			return false;
+            $user['userid'] = $this->_check_email();
+
+            if ($user['userid'] > 1 && $this->vb->options['ulogin_auto_attach']){
+
+                $this->db->query_write("INSERT INTO " . TABLE_PREFIX . "ulogin (userid, identity) VALUES (" . $user['userid'] . ", '" . $this->db->escape_string($this->user['identity']) . "')");
+
+            }else{
+
+                return false;
+
+            }
 		}
-		
-		$this->vb->userinfo = fetch_userinfo($user['userid']);
-		
+
+    	$this->vb->userinfo = fetch_userinfo($user['userid']);
+
 		if (!$this->vb->userinfo['username'])
 		{
 			$this->db->query_write("DELETE FROM " . TABLE_PREFIX . "ulogin WHERE identity = '" . $this->db->escape_string($this->user['identity']) . "'");
-		
 			return false;
 		}
-		
-		vbsetcookie('userid', $this->vb->userinfo['userid'], true, true, true);
+
+        $email_parts = explode('@', $this->user['email']);
+        $generated_email = $email_parts[0].'+'. $this->vb->userinfo['username'].'@'.$email_parts[1];
+
+        if ($this->vb->userinfo['email'] == $generated_email &&
+            $this->user['verified_email'] == 1 && $this->vb->options['ulogin_auto_attach']) {
+
+            if ($id = $this->_check_email()){
+
+                $this->vb->userinfo = fetch_userinfo($id);
+                $this->attach();
+
+            }else{
+
+                $this->db->query_write("UPDATE " . TABLE_PREFIX . "user SET email = '". $this->user['email'] ."' WHERE userid = " . $user['userid']);
+
+            }
+
+        }
+
+        vbsetcookie('userid', $this->vb->userinfo['userid'], true, true, true);
 		vbsetcookie('password', md5($this->vb->userinfo['password'] . COOKIE_SALT), true, true, true);
-		
+
 		process_new_login('', true, '');
-		
-		return true;
+
+        return true;
 	}
 	
 	/**
@@ -183,15 +369,51 @@ class uLogin
 	public function check_access()
 	{
 
-		if (!$this->vb->options['ulogin_enable'] || !$this->token || $this->vb->userinfo['userid']) // || parse_url($_SERVER['HTTP_REFERER'], PHP_URL_HOST) != 'ulogin.ru' || parse_url($_SERVER['HTTP_ORIGIN'], PHP_URL_HOST) != 'ulogin.ru' 
+		if (!$this->vb->options['ulogin_enable'] || !$this->token || $this->vb->userinfo['userid'])
 		{
 			return false;
 		}
 		
 		return true;
 	}
-	
-	/**
+
+    /**
+     * Check profile attach access
+     *
+     * @access 	public
+     * @return 	bool				if user have access return true, else return false
+     */
+    public function check_profile_attach_access()
+    {
+
+        if (!$this->vb->options['ulogin_enable'] || !$this->token || !$this->vb->userinfo['userid'])
+        {
+            return false;
+        }
+
+        return true;
+    }
+
+    /**
+     * Check profile detach access
+     *
+     * @access 	public
+     * @return 	bool				if user have access return true, else return false
+     */
+    public function check_profile_detach_access()
+    {
+
+        if (!$this->vb->options['ulogin_enable'] || !$this->vb->userinfo['userid'] || !$this->vb->GPC['ident'])
+        {
+            return false;
+        }
+
+        return true;
+    }
+
+
+
+    /**
 	 * Get back url
 	 * 
 	 * @access 	public
@@ -216,13 +438,11 @@ class uLogin
 			eval(standard_error(fetch_error('noregister')));
 		}
 
-        if ($addmember_process_hook = vBulletinHook::fetch_hook('register_addmember_process')){
-            eval($addmember_process_hook);
-        }
+
 
 		$userdata = &datamanager_init('User', $this->vb, ERRTYPE_ARRAY);
-                
-               
+
+
 		if ($this->vb->options['ulogin_vb_register'])
 		{
 			if ($this->vb->options['verifyemail'])
@@ -243,7 +463,7 @@ class uLogin
 			$newusergroupid = iif($this->vb->options['ulogin_groupid'], $this->vb->options['ulogin_groupid'], 2);
 		}
 
-
+        ($addmember_process_hook = vBulletinHook::fetch_hook('register_addmember_process')) ? eval($addmember_process_hook) : false;
 
 		$this->_fetch_login_mail();
                 $bdate = explode('.', $this->user['bdate']);
@@ -255,6 +475,7 @@ class uLogin
 		$userdata->set('ipaddress', IPADDRESS);
 		$userdata->set('languageid', $this->vb->userinfo['languageid']);
 		$userdata->set('birthday', $bdate[2].'-'.$bdate[1].'-'.$bdate[0]);
+
 		$userdata->pre_save();
 
 		if ($userdata->errors)
@@ -291,7 +512,9 @@ class uLogin
 			eval(fetch_email_phrases('newuser', 0));
 					
 			$newemails = explode(' ', $this->vb->options['newuseremail']);
-					
+
+            $email = $message = $subject = false;
+
 			foreach ($newemails AS $toemail)
 			{
 				if (trim($toemail))
@@ -319,7 +542,9 @@ class uLogin
 		$this->vb->userinfo =& $userinfo;
                 
 		$this->user_pic();
-                
+
+        $username = '';
+
 		if ($this->vb->options['ulogin_vb_register'])
 		{
 			if ($this->vb->options['verifyemail'])
@@ -343,9 +568,8 @@ class uLogin
 			eval(standard_error(fetch_error('registration_complete', $username, $this->vb->session->vars['sessionurl'], $this->back_url), '', false));
 		}
 
-        if ($addmember_complete_hook = vBulletinHook::fetch_hook('register_addmember_complete')){
-            eval($addmember_complete_hook);
-        }
+        ($addmember_complete_hook = vBulletinHook::fetch_hook('register_addmember_complete')) ? eval($addmember_complete_hook) : false;
+
 	}
         
         function user_pic(){
@@ -359,18 +583,18 @@ class uLogin
                 fclose($handler);
                 
                 $userpic = &datamanager_init('userpic', $this->vb, ERRTYPE_ARRAY);
-                /*
+
                 if ($this->vb->options['avatarenabled'] && $this->user['photo'] != 'http://ulogin.ru/img/photo.png'){
                     $avatar = $userpic->fetch_library($this->vb,ERRTYPE_ARRAY, 'userpic_avatar');
                     $avatar->set('userid', $this->vb->userinfo['userid']);
-                    $profilepic->set('filedata', $filedata);
+                    $avatar->set('filedata', $filedata);
                     $avatar->set('filename', $this->user['username']);
                     $avatar->pre_save();
                     $avatar->save();
-                }*/
+                }
                 
                 if ($this->vb->options['profilepicenabled'] && $this->user['photo'] != 'http://ulogin.ru/img/photo.png'){
-                    $profilepic = $userpic->fetch_library($this->vb,ERRTYPE_ARRAY, 'userpic_profilepic');
+                    $profilepic = $userpic->fetch_library($this->vb, ERRTYPE_ARRAY, 'userpic_profilepic');
                     $profilepic->set('userid', $this->vb->userinfo['userid']);
                     $profilepic->set('filedata',$filedata);
                     $profilepic->set('filename', $this->user['username']);

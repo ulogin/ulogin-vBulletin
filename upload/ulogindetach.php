@@ -28,5 +28,3 @@ $uLogin->detach();
 $vbulletin->url = $uLogin->get_url();
 
 exec_header_redirect($vbulletin->url);
-
-?>

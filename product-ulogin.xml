@@ -3,13 +3,13 @@
 <product productid="ulogin" active="1">
 	<title>uLogin</title>
 	<description>Авторизация через социальные сети с помощью сервиса ulogin.ru</description>
-	<version>1.4</version>
+	<version>1.8</version>
 	<url>http://ulogin.ru/</url>
 	<versioncheckurl />
 	<dependencies>
 	</dependencies>
 	<codes>
-		<code version="1.4">
+		<code version="1.8">
 			<installcode><![CDATA[$db->hide_errors();
 
 $db->query_write("CREATE TABLE IF NOT EXISTS " . TABLE_PREFIX . "ulogin (
@@ -39,15 +39,19 @@ $db->hide_errors();
 	$wtype = $vbulletin->options['ulogin_widget_type'];
 	$verify = $vbulletin->options['ulogin_verify'] ? "verify=1" : 'verify=0';
 	if ($wtype == 'window'){
-                  $template_hook['ulogin'] = $output_list. '<script src="http://ulogin.ru/js/ulogin.js?display=window&fields=first_name,last_name,nickname,email,bdate,photo&redirect_uri='.$url.'">     </script><a href="#" id="uLogin"><img src="http://ulogin.ru/img/button.png"/></a>';
+                  $template_hook['ulogin'] = $output_list. '<script src="//ulogin.ru/js/ulogin.js"></script>'.
+                      '<a href="#" id="uLogin" data-ulogin="display=window;fields=first_name,last_name,nickname,email,bdate,photo;redirect_uri='.$url.'">'.
+                        '<img src="https://ulogin.ru/img/button.png" width=187 height=30 alt="МультиВход"/>'.
+                      '</a>';
         }else{
-                $wtype =($wtype == 'panel' || $wtype == 'small') ? $wtype : 'small';
+             $wtype = $wtype == 'panel' ? 'panel' : 'small';
              if ($vbulletin->versionnumber < 4){
-                $template_hook['ulogin'] = $output_list. '<script src="http://ulogin.ru/js/ulogin.js?display='.$wtype.
-                        '&fields=first_name,last_name,nickname,email,bdate,photo&providers=' . $shown . '&hidden=' . $hidden . '&redirect_uri=' . $url . '"></script><a><div id="uLogin"></div></a>';
-              }else{
-                    $template_hook['ulogin'] = '<li>'.$output_list.'<script src="http://ulogin.ru/js/ulogin.js?display='.$wtype.'&fields=first_name,last_name,nickname,email,bdate,photo&providers='.$shown.'&hidden='.$hidden.'&redirect_uri='.$url.'"></script><a><div id="uLogin"></div></a></li>';
-                }
+                $template_hook['ulogin'] = $output_list. '<script src="//ulogin.ru/js/ulogin.js"></script>'.
+                    '<a><div id="uLogin" data-ulogin="display='.$wtype.';fields=first_name,last_name,nickname,email,bdate,photo;providers=' . $shown . ';hidden=' . $hidden . ';redirect_uri=' . $url . '"></div></a>';
+             }else{
+                $template_hook['ulogin'] = '<li>' . $output_list . '<script src="//ulogin.ru/js/ulogin.js"></script>'.
+                    '<a><div id="uLogin" data-ulogin="display='.$wtype.';fields=first_name,last_name,nickname,email,bdate,photo;providers=' . $shown . ';hidden=' . $hidden . ';redirect_uri=' . $url . '"></div></a></li>';
+             }
     } 
 }]]></phpcode>
 		</plugin>
@@ -82,14 +86,16 @@ $db->hide_errors();
 
         if ($wtype == 'window'){
 
-            $widget_code = '<script src="http://ulogin.ru/js/ulogin.js?display=window&fields=first_name,last_name,nickname,email,bdate,photo&redirect_uri='.$url.'">'.
-                           '</script><a href="#" id="uLogin"><img src="http://ulogin.ru/img/button.png"/></a>';
+            $widget_code = '<script src="//ulogin.ru/js/ulogin.js"></script>'.
+                      '<a href="#" id="uLogin" data-ulogin="display=window;fields=first_name,last_name,nickname,email,bdate,photo;redirect_uri='.$url.'">'.
+                        '<img src="https://ulogin.ru/img/button.png" width=187 height=30 alt="МультиВход"/>'.
+                      '</a>';
 
         }else{
 
-            $wtype =($wtype == 'panel' || $wtype == 'small') ? $wtype : 'small';
-            $widget_code = '<script src="http://ulogin.ru/js/ulogin.js?display='.$wtype.'&fields=first_name,last_name,nickname,email,bdate,photo&providers=' . 
-                           $shown . '&hidden=' . $hidden . '&redirect_uri=' . $url . '"></script><a><div id="uLogin"></div></a>';
+            $wtype = $wtype == 'panel' ? 'panel' : 'small';
+            $widget_code = '<script src="//ulogin.ru/js/ulogin.js"></script>'.
+                    '<a><div id="uLogin" data-ulogin="display='.$wtype.';fields=first_name,last_name,nickname,email,bdate,photo;providers=' . $shown . ';hidden=' . $hidden . ';redirect_uri=' . $url . '"></div></a>';
 
 	}
 

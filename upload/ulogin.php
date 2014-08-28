@@ -30,5 +30,3 @@ if (!$uLogin->auth())
 $vbulletin->url = $uLogin->get_url();
 
 do_login_redirect();
-
-?>

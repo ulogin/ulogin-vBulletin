@@ -522,8 +522,9 @@ class uLogin
             return false;
         }
 
+        $username = $this->generateNickname($this->user['first_name'], $this->user['last_name'], $this->user['nickname'], $this->user['bdate']);
         $bdate = explode('.', $this->user['bdate']);
-        $userdata->set('username', $this->generateNickname($this->user['first_name'], $this->user['last_name'], $this->user['nickname'], $this->user['bdate']));
+        $userdata->set('username', $username);
         $userdata->set('email', $this->user['email']);
         $userdata->set('password', fetch_random_password(10));
         $userdata->set('usergroupid', $newusergroupid);
@@ -587,8 +588,6 @@ class uLogin
         $this->vb->userinfo =& $userinfo;
 
         $this->user_pic();
-
-        $username = '';
 
         if ($this->vb->options['ulogin_vb_register']) {
             if ($this->vb->options['verifyemail']) {

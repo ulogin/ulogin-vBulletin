@@ -513,7 +513,7 @@ class uLogin
             $newusergroupid = iif($this->vb->options['ulogin_groupid'], $this->vb->options['ulogin_groupid'], 2);
         }
 
-        ($addmember_process_hook = vBulletinHook::fetch_hook('register_addmember_process')) ? eval($addmember_process_hook) : false;
+//        ($addmember_process_hook = vBulletinHook::fetch_hook('register_addmember_process')) ? eval($addmember_process_hook) : false;
 
         if ($this->_check_mail()) {
             eval(standard_error('Данный email уже зарегистрирован на сайте.' .

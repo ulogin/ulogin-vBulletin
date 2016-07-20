@@ -30,7 +30,7 @@ $db->hide_errors();
 	<plugins>
 		<plugin active="1" executionorder="1">
 			<title>Adding uLogin icons.</title>
-			<hookname>global_start</hookname>
+			<hookname>global_bootstrap_init_complete</hookname>
 			<phpcode><![CDATA[if ($vbulletin->options['ulogin_enable'] && !$vbulletin->userinfo['userid'])
 {
 	$url = urlencode($vbulletin->options['bburl'] . '/ulogin.php?back=' . base64_encode($vbulletin->options['bburl'] . $_SERVER['REQUEST_URI']));

@@ -524,8 +524,9 @@ class uLogin
 
         $username = $this->generateNickname($this->user['first_name'], $this->user['last_name'], $this->user['nickname'], $this->user['bdate']);
         $bdate = explode('.', $this->user['bdate']);
+        $email = $this->user['email'];
         $userdata->set('username', $username);
-        $userdata->set('email', $this->user['email']);
+        $userdata->set('email', $email);
         $userdata->set('password', fetch_random_password(10));
         $userdata->set('usergroupid', $newusergroupid);
         $userdata->set_usertitle('', false, $this->vb->usergroupcache["$newusergroupid"], false, false);
@@ -565,7 +566,8 @@ class uLogin
 
             $newemails = explode(' ', $this->vb->options['newuseremail']);
 
-            $email = $message = $subject = false;
+            $subject =& $this->vb->GPC['subject'];
+            $message =& $this->vb->GPC['message'];
 
             foreach ($newemails AS $toemail) {
                 if (trim($toemail)) {
